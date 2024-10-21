@@ -1,6 +1,10 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import GUI from 'lil-gui'
+import glaxyVertex from './shaders/galaxy/vertex.glsl?raw'
+import glaxyFragment from './shaders/galaxy/fragment.glsl?raw'
+
+
 
 /**
  * Base
@@ -48,6 +52,7 @@ const generateGalaxy = () =>
 
     const positions = new Float32Array(parameters.count * 3)
     const colors = new Float32Array(parameters.count * 3)
+    const scale = new Float32Array( parameters.count * 1);
 
     const insideColor = new THREE.Color(parameters.insideColor)
     const outsideColor = new THREE.Color(parameters.outsideColor)
@@ -68,7 +73,7 @@ const generateGalaxy = () =>
         positions[i3    ] = Math.cos(branchAngle) * radius + randomX
         positions[i3 + 1] = randomY
         positions[i3 + 2] = Math.sin(branchAngle) * radius + randomZ
-
+ 
         // Color
         const mixedColor = insideColor.clone()
         mixedColor.lerp(outsideColor, radius / parameters.radius)
@@ -76,21 +81,29 @@ const generateGalaxy = () =>
         colors[i3    ] = mixedColor.r
         colors[i3 + 1] = mixedColor.g
         colors[i3 + 2] = mixedColor.b
-    }
 
+        // scales
+
+        scale[i] = Math.random()
+    }
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
     geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+    geometry.setAttribute( 'scale', new THREE.BufferAttribute( scale, 1))
 
     /**
      * Material
      */
-    material = new THREE.PointsMaterial({
-        size: parameters.size,
-        sizeAttenuation: true,
-        depthWrite: false,
-        blending: THREE.AdditiveBlending,
-        vertexColors: true
+    material = new THREE.ShaderMaterial({
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      vertexColors: true,
+      vertexShader: glaxyVertex,
+      fragmentShader: glaxyFragment
     })
+
+    material.uniforms = {
+        uSize: {value: 2.}
+    }
 
     /**
      * Points
@@ -108,6 +121,7 @@ gui.add(parameters, 'randomness').min(0).max(2).step(0.001).onFinishChange(gener
 gui.add(parameters, 'randomnessPower').min(1).max(10).step(0.001).onFinishChange(generateGalaxy)
 gui.addColor(parameters, 'insideColor').onFinishChange(generateGalaxy)
 gui.addColor(parameters, 'outsideColor').onFinishChange(generateGalaxy)
+gui.add(material.uniforms.uSize, 'value').min( 0.).max( 10.).step( .0001).name('uSize')
 
 /**
  * Sizes
